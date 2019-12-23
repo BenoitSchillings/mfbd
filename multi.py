@@ -83,20 +83,20 @@ sum = sum / 4.0
 
 k0 = np.zeros((P, P))*0.0
 k0[P2,P2] = 1.0
-k0 = gaussian_filter(k0, sigma=3.2)
+k0 = gaussian_filter(k0, sigma=2.1) + 0.0001
 
 k1 = np.zeros((P, P))*0.0
-k1[P2,P2] = 1.0
-k1 = gaussian_filter(k1, sigma=2.7)
+k1[P2+2,P2] = 1.0
+k1 = gaussian_filter(k1, sigma=2.1) + 0.0001
 
 
 k2 = np.zeros((P, P))*0.0
-k2[P2,P2] = 1.0
-k2 = gaussian_filter(k2, sigma=2.8)
+k2[P2,P2-2] = 1.0
+k2 = gaussian_filter(k2, sigma=2.1) + 0.0001
 
 k3 = np.zeros((P, P))*0.0
 k3[P2,P2] = 1.0
-k3 = gaussian_filter(k3, sigma=2.1)
+k3 = gaussian_filter(k3, sigma=2.1) + 0.0001
 
 
 k0 = k0 / np.sum(k0)
@@ -133,67 +133,68 @@ mul3 = tf.Variable(1.0, name = 'mul3', dtype=tf.float32)
 model = tf.Variable(sum * 1.0, name = 'model', dtype=tf.float32)
 
 
-tmp = tf.math.abs(psf0)
-p0 = tmp / tf.reduce_sum(tmp)
+#tmp = tf.math.abs(psf0)
+#p0 = tmp / tf.reduce_sum(tmp)
+p0 = tf.math.abs(psf0)
 
 r0 = mul0 * tf.nn.conv2d(model[tf.newaxis, :, :, tf.newaxis],p0[:, :, tf.newaxis, tf.newaxis],strides=[1, 1, 1, 1],padding="VALID")[0, :, :, 0]
 
-tmp = tf.math.abs(psf1)
-p1 = tmp / tf.reduce_sum(tmp)
+#tmp = tf.math.abs(psf1)
+p1 = tf.math.abs(psf1)
+#p1 = tmp / tf.reduce_sum(tmp)
 
 r1 = mul1 * tf.nn.conv2d(model[tf.newaxis, :, :, tf.newaxis],p1[:, :, tf.newaxis, tf.newaxis],strides=[1, 1, 1, 1],padding="VALID")[0, :, :, 0]
 
-tmp = tf.math.abs(psf2)
-p2 = tmp / tf.reduce_sum(tmp)
+#tmp = tf.math.abs(psf2)
+p2 = tf.math.abs(psf2)
+
+#p2 = tmp / tf.reduce_sum(tmp)
 
 r2 = mul2 * tf.nn.conv2d(model[tf.newaxis, :, :, tf.newaxis],p2[:, :, tf.newaxis, tf.newaxis],strides=[1, 1, 1, 1],padding="VALID")[0, :, :, 0]
 
-tmp = tf.math.abs(psf3)
-p3 = tmp / tf.reduce_sum(tmp)
+#tmp = tf.math.abs(psf3)
+p3 = tf.math.abs(psf3)
+
+#p3 = tmp / tf.reduce_sum(tmp)
 
 r3 = mul3 * tf.nn.conv2d(model[tf.newaxis, :, :, tf.newaxis],p3[:, :, tf.newaxis, tf.newaxis],strides=[1, 1, 1, 1],padding="VALID")[0, :, :, 0]
 
 
 v0 = tf.math.subtract(r0, observed0[P2:XS-P2, P2:YS-P2])
-v0 = tf.math.abs(v0)
-#v0 = tf.math.multiply(v0, v0)
+v0 = tf.math.multiply(v0, v0)
 e0 = tf.math.reduce_mean(tf.math.square(v0))
 
 v1 = tf.math.subtract(r1, observed1[P2:XS-P2, P2:YS-P2])
-v1 = tf.math.abs(v1)
-
-#v1 = tf.math.multiply(v1, v1)
+v1 = tf.math.multiply(v1, v1)
 e1 = tf.math.reduce_mean(tf.math.square(v1))
 
 v2 = tf.math.subtract(r2, observed2[P2:XS-P2, P2:YS-P2])
-v2 = tf.math.abs(v2)
-#v2 = tf.math.multiply(v2, v2)
+v2 = tf.math.multiply(v2, v2)
 e2 = tf.math.reduce_mean(tf.math.square(v2))
 
 v3 = tf.math.subtract(r3, observed3[P2:XS-P2, P2:YS-P2])
-v3 = tf.math.abs(v3)
-#v3 = tf.math.multiply(v3, v3)
+v3 = tf.math.multiply(v3, v3)
 e3 = tf.math.reduce_mean(tf.math.square(v3))
 
 noise = benoit_noise(model)
 
-noise = noise - 0.084562345
+noise = noise - 0.086562345
 noise = tf.clip_by_value(noise, 0, 100.0)
 
 loss = 100.0*(e0 + e1 + e2 + e3) + 30.0*noise
 
 #------------------------------------------------------------------
 
-optimizer0 = tf.train.AdamOptimizer(learning_rate=0.00001)
+optimizer0 = tf.train.AdamOptimizer(learning_rate=0.0001)
 train0 = optimizer0.minimize(loss, var_list=[model, psf0, mul1, mul2, mul3, mul0])
 
-optimizer1 = tf.train.AdamOptimizer(learning_rate=0.00001)
+optimizer1 = tf.train.AdamOptimizer(learning_rate=0.0001)
 train1 = optimizer1.minimize(loss, var_list=[model, psf1, mul1, mul2, mul3, mul0])
 
-optimizer2 = tf.train.AdamOptimizer(learning_rate=0.00001)
+optimizer2 = tf.train.AdamOptimizer(learning_rate=0.0001)
 train2 = optimizer0.minimize(loss, var_list=[model, psf2, mul1, mul2, mul3, mul0])
 
-optimizer3 = tf.train.AdamOptimizer(learning_rate=0.00001)
+optimizer3 = tf.train.AdamOptimizer(learning_rate=0.0001)
 train3 = optimizer1.minimize(loss, var_list=[model, psf3, mul1, mul2, mul3, mul0])
 
 init = tf.initialize_all_variables()
